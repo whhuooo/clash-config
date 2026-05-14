@@ -1,0 +1,89 @@
+# 基础设置
+mixed-port: 7890
+allow-lan: false
+mode: rule
+log-level: info
+external-controller: 127.0.0.1:9090
+
+# DNS 优化设置
+dns:
+  enable: true
+  ipv6: false
+  enhanced-mode: fake-ip
+  fake-ip-range: 198.18.0.1/16
+  use-hosts: true
+  respect-rules: true
+
+  default-nameserver:
+    - system
+    - 223.5.5.5
+    - 119.29.29.29
+
+  nameserver:
+    - system
+    - https://1.1.1.1/dns-query
+    - https://8.8.8.8/dns-query
+    - https://dns.alidns.com/dns-query
+    - https://doh.pub/dns-query
+
+  proxy-server-nameserver:
+    - system
+    - https://1.1.1.1/dns-query
+    - https://8.8.8.8/dns-query
+
+  fallback:
+    - https://1.1.1.1/dns-query
+    - https://8.8.8.8/dns-query
+
+  fallback-filter:
+    geoip: true
+    geoip-code: CN
+    ipcidr:
+      - 240.0.0.0/4
+
+# 代理节点配置
+proxies:
+  - name: "SF-CDN-Node 🚀"
+    type: vless
+    server: www.7412585.xyz           # 你的加速域名
+    port: 443                         # 走 Cloudflare 必须使用 443 端口
+    uuid: 2fc39241-e96d-4d21-a65c-f278f04a906f  # 刚才脚本生成的全新 UUID
+    cipher: auto
+    udp: true
+    tls: true                         # 开启 TLS，因为连接的是 CF 的 HTTPS
+    network: ws
+    ws-opts:
+      path: "/ray"                    # 必须和服务器配置的 path 保持一致
+      headers:
+        Host: www.7412585.xyz
+
+# 策略组配置
+proxy-groups:
+  - name: PROXY
+    type: select
+    proxies:
+      - "SF-CDN-Node 🚀"
+      - DIRECT
+
+# 分流规则
+rules:
+  # 绕过本地和局域网
+  - GEOIP,LAN,DIRECT
+  
+  # ChatGPT 规则
+  - DOMAIN-SUFFIX,chatgpt.com,PROXY
+  - DOMAIN-SUFFIX,openai.com,PROXY
+  - DOMAIN-SUFFIX,oaistatic.com,PROXY
+  - DOMAIN-SUFFIX,oaiusercontent.com,PROXY
+
+  # Claude 规则
+  - DOMAIN-SUFFIX,claude.ai,PROXY
+  - DOMAIN,api.anthropic.com,PROXY
+  - DOMAIN,platform.claude.com,PROXY
+
+  # 中国大陆直连
+  - GEOIP,CN,DIRECT
+  - GEOSITE,CN,DIRECT
+
+  # 其他所有流量走代理
+  - MATCH,PROXY
